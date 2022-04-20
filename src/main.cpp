@@ -9,6 +9,7 @@
 #include <seeed_bme680.h>
 #include <SparkFunBQ27441.h>
 #include <Digital_Light_TSL2561.h>
+#include <Seeed_VEML6070.h>
 using namespace adk;
 using namespace ace_button;
 
@@ -51,13 +52,20 @@ Module modules[MODULE_AMOUNT] = {
 int pageId = 0;
 
 TFT_eSPI tft;
-TFT_eSprite spr = TFT_eSprite(&tft);  // Sprite
+TFT_eSprite spr = TFT_eSprite(&tft);
 
 Task taskBME, taskGas, taskLight, taskSound, taskGyro, taskBattery, taskUi; 
 
 Seeed_BME680 bme680(IIC_ADDR);
 GAS_GMXXX<TwoWire> gas;
 const unsigned int BATTERY_CAPACITY = 650; // Set Wio Terminal Battery's Capacity 
+// #ifdef ARDUINO_SAMD_VARIANT_COMPLIANCE
+//   #define SERIAL SerialUSB
+// #else
+//   #define SERIAL Serial
+// #endif
+// VEML6070 uv_sensor;
+
 
 AceButton bFavA(WIO_KEY_A);
 AceButton bFavB(WIO_KEY_B);
@@ -99,6 +107,11 @@ void setup()
     gas.begin(Wire, 0x08); 
     bme680.init();
     TSL2561.init();
+    //uv_sensor.init();
+    /*threshold is 145 steps*/
+    //uv_sensor.set_interrupt(INT_145_STEP,ENABLE);
+
+
     if (lipo.begin()) // begin() will return true if communication is successful
     {
       lipo.setCapacity(BATTERY_CAPACITY);
@@ -245,7 +258,7 @@ void taskGasData(void *) {
   float currentVOC = float(gas.getGM502B());
   float currentCO = float(gas.getGM702B());
 
-   if(modules[id].entries.size() == 0) {
+  if(modules[id].entries.size() == 0) {
     Entry *no2 = new Entry();
     no2->title = "NO2";
     no2->unit = "ppm";
@@ -277,7 +290,35 @@ void taskGasData(void *) {
    }
 }
 
-void taskLightData(void *) {}
+void taskLightData(void *) {
+  const int id = 2;
+
+  float currentLux = TSL2561.readVisibleLux();
+  // u16 step;
+  // uv_sensor.wait_for_ready();
+  // uv_sensor.read_step(step);
+  //char *UV_str[]={"low level","moderate level","high_level","very high","extreme"};
+  //RISK_LEVEL currentUvLevel=uv_sensor.convert_to_risk_level(step);
+  //float currentUV = float(step);
+
+  if(modules[id].entries.size() == 0) {
+    Entry *lux = new Entry();
+    lux->title = "Light";
+    lux->unit = "lux";
+    lux->value = currentLux;
+    modules[id].entries.add(lux);
+
+    // Entry *uv = new Entry();
+    // uv->title = "UV";
+    // uv->unit = "";//UV_str[currentUvLevel];
+    // uv->value = currentUV;
+    // modules[id].entries.add(uv);    
+  } else {
+    modules[id].entries.get(0)->value = currentLux;
+    //modules[id].entries.get(1)->value = currentUV;
+    //modules[id].entries.get(1)->unit = UV_str[currentUvLevel];
+  } 
+}
 void taskSoundData(void *) {}
 void taskGyroData(void *) {}
 
