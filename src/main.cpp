@@ -1,44 +1,6 @@
-#include <Arduino.h>
+#include "sensorterminal.h"
+#include "models.h"
 
-#include"TFT_eSPI.h"
-#include <ardukit.h>
-#include <AceButton.h>
-#include <LinkedList.h>
-#include <Multichannel_Gas_GMXXX.h>
-#include <Wire.h>
-#include <seeed_bme680.h>
-#include <SparkFunBQ27441.h>
-#include <Digital_Light_TSL2561.h>
-#include <Seeed_VEML6070.h>
-using namespace adk;
-using namespace ace_button;
-
-#define BME_SCK 13
-#define BME_MISO 12
-#define BME_MOSI 11
-#define BME_CS 10
-#define IIC_ADDR  uint8_t(0x76)
-
-const String TITLE_BME = "BME860";
-const String TITLE_GAS = "Gas";
-const String TITLTE_LIGHT = "Light";
-const String TITLE_SOUND = "Sound";
-const String TITLE_GYRO = "Gyro";
-const String TITLE_BATTERY = "Battery";
-const int MODULE_AMOUNT = 6;
-
-
-class Entry {
-  public:
-    String title;
-    String unit;
-    float value;
-};
-
-struct Module {
-  String title;
-  LinkedList<Entry*> entries;
-};
 
 Module modules[MODULE_AMOUNT] = {
   {TITLE_BME, LinkedList<Entry*>()},
@@ -58,7 +20,6 @@ Task taskBME, taskGas, taskLight, taskSound, taskGyro, taskBattery, taskUi;
 
 Seeed_BME680 bme680(IIC_ADDR);
 GAS_GMXXX<TwoWire> gas;
-const unsigned int BATTERY_CAPACITY = 650; // Set Wio Terminal Battery's Capacity 
 // #ifdef ARDUINO_SAMD_VARIANT_COMPLIANCE
 //   #define SERIAL SerialUSB
 // #else
@@ -72,17 +33,6 @@ AceButton bFavB(WIO_KEY_B);
 AceButton bFavC(WIO_KEY_C);
 AceButton bNext(WIO_5S_RIGHT);
 AceButton bPrev(WIO_5S_LEFT);
-
-//forward references
-void printSprite(void *); 
-void handleEvent(AceButton*, uint8_t, uint8_t);
-void taskBMEData(void *);
-void taskGasData(void *);
-void taskLightData(void *);
-void taskSoundData(void *);
-void taskGyroData(void *);
-void taskBatteryData(void *);
-
 
 void setup()
 {
