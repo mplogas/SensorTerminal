@@ -6,7 +6,7 @@
 #include <LinkedList.h>
 #include <SparkFunBQ27441.h>
 #include <Digital_Light_TSL2561.h>
-#include <Seeed_VEML6070.h>
+// #include <Seeed_VEML6070.h>
 #include <Multichannel_Gas_GMXXX.h>
 #include <Wire.h>
 #include <seeed_bme680.h>
@@ -20,6 +20,7 @@ using namespace ace_button;
 #define IIC_ADDR  uint8_t(0x76)
 
 const unsigned int BATTERY_CAPACITY = 650;
+// const char *UV_str[]={"low level","moderate level","high_level","very high","extreme"};
 const String TITLE_BME = "BME860";
 const String TITLE_GAS = "Gas";
 const String TITLTE_LIGHT = "Light";

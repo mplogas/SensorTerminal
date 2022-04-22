@@ -1,7 +1,6 @@
 #include "sensorterminal.h"
 #include "models.h"
 
-
 Module modules[MODULE_AMOUNT] = {
   {TITLE_BME, LinkedList<Entry*>()},
   {TITLE_GAS, LinkedList<Entry*>()},
@@ -20,13 +19,7 @@ Task taskBME, taskGas, taskLight, taskSound, taskGyro, taskBattery, taskUi;
 
 Seeed_BME680 bme680(IIC_ADDR);
 GAS_GMXXX<TwoWire> gas;
-// #ifdef ARDUINO_SAMD_VARIANT_COMPLIANCE
-//   #define SERIAL SerialUSB
-// #else
-//   #define SERIAL Serial
-// #endif
 // VEML6070 uv_sensor;
-
 
 AceButton bFavA(WIO_KEY_A);
 AceButton bFavB(WIO_KEY_B);
@@ -36,13 +29,14 @@ AceButton bPrev(WIO_5S_LEFT);
 
 void setup()
 {
-    Serial.begin(128000);
+    Serial.begin(9600);
 
     tft.begin();
     tft.setRotation(3);
     spr.createSprite(tft.width(), tft.height());
     spr.setFreeFont(&FreeMono9pt7b);
 
+    pinMode(A0, INPUT);
     pinMode(WIO_KEY_A, INPUT_PULLUP);
     pinMode(WIO_KEY_B, INPUT_PULLUP);
     pinMode(WIO_KEY_C, INPUT_PULLUP);
@@ -57,9 +51,12 @@ void setup()
     gas.begin(Wire, 0x08); 
     bme680.init();
     TSL2561.init();
-    //uv_sensor.init();
-    /*threshold is 145 steps*/
-    //uv_sensor.set_interrupt(INT_145_STEP,ENABLE);
+    // if(uv_sensor.init()) {
+    //   dmsg("UV sensor init failed!");
+    // }
+    
+    // /*threshold is 145 steps*/
+    // uv_sensor.set_interrupt(INT_145_STEP,ENABLE);
 
 
     if (lipo.begin()) // begin() will return true if communication is successful
@@ -72,7 +69,7 @@ void setup()
     taskBME.set_interval(1000).start(taskBMEData); 
     taskGas.set_interval(1000).start(taskGasData);
     taskLight.set_interval(1000).start(taskLightData);
-    taskSound.set_interval(1000).start(taskSoundData);
+    taskSound.set_interval(500).start(taskSoundData);
     taskGyro.set_interval(500).start(taskGyroData);
     taskBattery.set_interval(1000).start(taskBatteryData);
     taskUi.set_interval(200).start(printSprite);
@@ -244,12 +241,14 @@ void taskLightData(void *) {
   const int id = 2;
 
   float currentLux = TSL2561.readVisibleLux();
+
+  //uv sensor seems to kill wio terminal :/
   // u16 step;
   // uv_sensor.wait_for_ready();
-  // uv_sensor.read_step(step);
-  //char *UV_str[]={"low level","moderate level","high_level","very high","extreme"};
-  //RISK_LEVEL currentUvLevel=uv_sensor.convert_to_risk_level(step);
-  //float currentUV = float(step);
+  // dmsg("uv sensor result %s",  uv_sensor.read_step(step));
+  // float currentUVValue = float(step);  
+  // String level = UV_str[uv_sensor.convert_to_risk_level(step)];
+  // String currentUVLevelText = String("( " + level + " )");
 
   if(modules[id].entries.size() == 0) {
     Entry *lux = new Entry();
@@ -260,16 +259,46 @@ void taskLightData(void *) {
 
     // Entry *uv = new Entry();
     // uv->title = "UV";
-    // uv->unit = "";//UV_str[currentUvLevel];
-    // uv->value = currentUV;
+    // uv->unit = currentUVLevelText;
+    // uv->value = currentUVValue;
     // modules[id].entries.add(uv);    
   } else {
     modules[id].entries.get(0)->value = currentLux;
-    //modules[id].entries.get(1)->value = currentUV;
-    //modules[id].entries.get(1)->unit = UV_str[currentUvLevel];
+    // modules[id].entries.get(1)->value = currentUVValue;
+    // modules[id].entries.get(1)->unit = currentUVLevelText;
   } 
 }
-void taskSoundData(void *) {}
+void taskSoundData(void *) {
+  const int id = 3;
+
+  //wio terminal seems to create noise on A0/A1 
+  //sample 32 times and divide by 32 through bit-shift
+  // long sum = 0;
+  // for(int i=0; i<32; i++)
+  // {
+  //     sum += analogRead(A0);
+  // } 
+  // sum >>= 5;
+  
+  // long sum = 0;
+  // for(int i=0; i<128; i++)
+  // {
+  //     sum += analogRead(A1);
+  // } 
+  int raw = analogRead(A0);
+  int dB = (raw + 83.2073) / 7.003;
+  float currentNoise = dB; //float(sum/128);
+
+  if(modules[id].entries.size() == 0) {
+    Entry *noise = new Entry();
+    noise->title = "Volume";
+    noise->unit = "dB";
+    noise->value = currentNoise;
+    modules[id].entries.add(noise);
+  } else {
+    modules[id].entries.get(0)->value = currentNoise;
+  } 
+}
 void taskGyroData(void *) {}
 
 void taskBatteryData(void *) {
